@@ -1,10 +1,11 @@
 """
 Gestión del dataset en Supabase: carga, guardado, validación de reglas de captura
 y limpieza (outliers inyectados intencionalmente para la práctica).
+Usa el cliente oficial supabase-py (más estable que st-supabase-connection).
 """
 import streamlit as st
 import pandas as pd
-from st_supabase_connection import SupabaseConnection
+from supabase import create_client, Client
 
 COLUMNS = [
     "ID_Cliente", "Hora_Llegada", "Tiempo_Espera_Min", "Tiempo_Servicio_Min",
@@ -27,15 +28,17 @@ FROM_DB = {v: k for k, v in TO_DB.items()}
 
 
 @st.cache_resource
-def _conn():
-    return st.connection("supabase", type=SupabaseConnection)
+def _conn() -> Client:
+    """Conexión cacheada a Supabase usando supabase-py directamente."""
+    url = st.secrets["SUPABASE_URL"]
+    key = st.secrets["SUPABASE_KEY"]
+    return create_client(url, key)
 
 
 def load_data() -> tuple[pd.DataFrame, str | None]:
     """
     Carga todos los registros desde Supabase.
     Devuelve (df, error). Si no hay error, error es None.
-    Si hay error, devuelve un DataFrame vacío con las columnas correctas.
     """
     try:
         res = _conn().table("cafeteria").select("*").execute()
