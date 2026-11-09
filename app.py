@@ -47,7 +47,7 @@ with st.sidebar:
 
         **Periodo de captura:** 7:00 AM – 11:00 AM.
 
-        **Dataset:** 200 clientes simulados con 9 variables.
+        **Dataset:** 200+ clientes simulados con 9 variables.
 
         **Materia:** Modelos Estadísticos para el Aprendizaje Automático y Ciencia de Datos.
 
@@ -66,18 +66,7 @@ with st.sidebar:
         """
     )
 
-    st.divider()
-
-    st.markdown("### 👤 Autor")
-    st.markdown(
-        """
-        **Nombre:** [Tu nombre completo]  
-        **Materia:** [Nombre de la materia]  
-        **Institución:** [Tu universidad]  
-        **Periodo:** [Ej. 2026-1]
-        """
-    )
-
+   
     st.divider()
 
     st.markdown("### 🔌 Estado de la conexión")
