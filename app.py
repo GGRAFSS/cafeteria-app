@@ -64,7 +64,7 @@ with st.sidebar:
     st.markdown("### 👤 Autor")
     st.markdown(
         """
-        **Integrantes:** Rodríguez Avilés Selene y Raygoza Flores Gabriel  
+        **Integrantes:** Rodríguez Avilez Selene y Raygoza Flores Gabriel  
         **Institución:** Instituto Tecnológico de Tijuana - TecNM  
         **Periodo:** 2026
         """

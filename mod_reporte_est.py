@@ -103,7 +103,7 @@ except ImportError:  # pragma: no cover - la IA es opcional
 # CONSTANTES DEL DOCUMENTO
 # ============================================================
 TITULO_CORTO = "Cafetería Universitaria — Modelos Estadísticos"
-AUTORES = ("Rodríguez Avilés Selene", "Raygoza Flores Gabriel")
+AUTORES = ("Rodríguez Avilez Selene", "Raygoza Flores Gabriel")
 DOCENTE = "Dr. Valdez Acosta Fevrier Adolfo"
 INSTITUCION = "Instituto Tecnológico de Tijuana - TecNM"
 PROGRAMA = "Maestría en Inteligencia Artificial"

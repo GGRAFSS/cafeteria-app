@@ -410,7 +410,7 @@ Los scripts de humo y verificación se ejecutan en local, con el entorno virtual
 
 | Campo | Detalle |
 |---|---|
-| **Integrantes** | Rodríguez Avilés Selene · Raygoza Flores Gabriel |
+| **Integrantes** | Rodríguez Avilez Selene · Raygoza Flores Gabriel |
 | **Institución** | Instituto Tecnológico de Tijuana — TecNM |
 | **Materia** | Modelos Estadísticos para el Aprendizaje Automático y Ciencia de Datos |
 | **Docente** | Dr. Valdez Acosta Fevrier Adolfo |
