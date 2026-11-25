@@ -3,6 +3,7 @@ Módulo 3: Distribuciones de Probabilidad (Unidad 2)
 - Simulación de variables aleatorias (Poisson para llegadas, Exponencial para espera)
 - Ajuste de curvas de densidad (Normal para servicio, Exponencial para espera)
 - Validación de supuestos: test KS + Q-Q plots
+- Simulaciones de apoyo: Bernoulli, Binomial, Geométrica, Hipergeométrica, Gamma
 """
 import numpy as np
 import pandas as pd
@@ -226,3 +227,231 @@ def plot_ajuste_con_qq(series, dist="expon", title_prefix="Tiempo de Espera"):
 
     plt.tight_layout()
     return fig
+
+
+# ============================================================
+# 6. SIMULACIONES DE APOYO (Bernoulli, Binomial, Geométrica,
+#    Hipergeométrica y Gamma)
+# ============================================================
+def _resumen_sim(nombre: str, parametros: dict, muestra, media_teorica: float,
+                 varianza_teorica: float) -> dict:
+    """Resumen numérico de una simulación listo para tabla del reporte."""
+    valores = np.asarray(muestra, dtype=float)
+    var_teorica = max(float(varianza_teorica), 0.0)
+    resumen = dict(parametros)
+    resumen.update({
+        "distribucion": nombre,
+        "n_simulaciones": int(valores.size),
+        "media_teorica": float(media_teorica),
+        "varianza_teorica": var_teorica,
+        "desv_std_teorica": float(np.sqrt(var_teorica)),
+        "media_empirica": float(valores.mean()),
+        "desv_std_empirica": (float(valores.std(ddof=1))
+                              if valores.size > 1 else 0.0),
+        "diferencia_media": float(valores.mean() - media_teorica),
+        "minimo": float(valores.min()),
+        "maximo": float(valores.max()),
+    })
+    return resumen
+
+
+def _grafico_sim(muestra, titulo: str, xlabel: str, teorica=None,
+                 discreta: bool = True, bins: int = 30):
+    """Barras (discretas) o histograma (continuas) frente al valor teórico."""
+    valores = np.asarray(muestra, dtype=float)
+    fig, ax = _fig()
+
+    if discreta:
+        base = int(np.floor(valores.min()))
+        conteos = np.bincount(valores.astype(int) - base)
+        ejes = np.arange(base, base + conteos.size)
+        ax.bar(ejes, conteos / valores.size, color="#4C72B0",
+               edgecolor="white", alpha=0.85, label="Simulación")
+        ax.set_ylabel("Probabilidad")
+    else:
+        ax.hist(valores, bins=bins, density=True, color="#4C72B0",
+                edgecolor="white", alpha=0.85, label="Simulación")
+        ax.set_ylabel("Densidad")
+
+    if teorica is not None:
+        x_teorica, y_teorica = teorica
+        ax.plot(x_teorica, y_teorica, "-o" if discreta else "-",
+                color="#C44E52", lw=2, ms=5, label="Valor teórico")
+        if discreta:
+            ax.set_xlim(float(x_teorica.min()) - 0.6,
+                        float(x_teorica.max()) + 0.6)
+
+    ax.axvline(valores.mean(), color="#55A868", ls="--", lw=1.5,
+               label=f"Media simulada = {valores.mean():.3f}")
+    ax.set_title(titulo)
+    ax.set_xlabel(xlabel)
+    ax.legend(fontsize=8)
+    ax.grid(alpha=0.3, axis="y")
+    plt.tight_layout()
+    return fig
+
+
+def simular_bernoulli(p: float = 0.5, n: int = 1000, semilla=None):
+    """
+    Simula `n` ensayos Bernoulli(p): 1 = éxito (probabilidad p), 0 = fracaso.
+
+    Devuelve {"fig": Figure, "resumen": dict}. La media teórica es p y la
+    varianza p·(1 − p).
+    """
+    p = float(p)
+    if not 0.0 < p < 1.0:
+        raise ValueError("p debe estar estrictamente entre 0 y 1.")
+    n = int(n)
+    if n < 2:
+        raise ValueError("n debe ser al menos 2 simulaciones.")
+
+    generador = np.random.default_rng(semilla)
+    muestra = generador.binomial(1, p, size=n)
+
+    x = np.array([0.0, 1.0])
+    fig = _grafico_sim(
+        muestra, f"Simulación Bernoulli (p = {p:.2f})",
+        "Resultado (0 = fracaso, 1 = éxito)",
+        teorica=(x, stats.bernoulli(p).pmf(x)))
+
+    resumen = _resumen_sim("Bernoulli", {"p": p}, muestra, p, p * (1 - p))
+    return {"fig": fig, "resumen": resumen}
+
+
+def simular_binomial(n_ensayos: int = 10, p: float = 0.5, n: int = 1000,
+                     semilla=None):
+    """
+    Simula `n` réplicas de X ~ Binomial(n_ensayos, p).
+
+    Devuelve {"fig": Figure, "resumen": dict}. Media n·p y varianza
+    n·p·(1 − p).
+    """
+    n_ensayos = int(n_ensayos)
+    p = float(p)
+    n = int(n)
+    if n_ensayos < 1:
+        raise ValueError("n_ensayos debe ser al menos 1.")
+    if not 0.0 < p < 1.0:
+        raise ValueError("p debe estar estrictamente entre 0 y 1.")
+    if n < 2:
+        raise ValueError("n debe ser al menos 2 simulaciones.")
+
+    generador = np.random.default_rng(semilla)
+    muestra = generador.binomial(n_ensayos, p, size=n)
+
+    x = np.arange(0, n_ensayos + 1)
+    fig = _grafico_sim(
+        muestra, f"Simulación Binomial (n = {n_ensayos}, p = {p:.2f})",
+        "Número de éxitos",
+        teorica=(x, stats.binom.pmf(x, n_ensayos, p)))
+
+    media = n_ensayos * p
+    resumen = _resumen_sim(
+        "Binomial", {"n_ensayos": n_ensayos, "p": p}, muestra,
+        media, media * (1 - p))
+    return {"fig": fig, "resumen": resumen}
+
+
+def simular_geometrica(p: float = 0.3, n: int = 1000, semilla=None):
+    """
+    Simula `n` tiempos de espera X ~ Geométrica(p) (ensayos hasta el 1er éxito).
+
+    Devuelve {"fig": Figure, "resumen": dict}. Soporte 1, 2, 3, …; media 1/p y
+    varianza (1 − p)/p².
+    """
+    p = float(p)
+    if not 0.0 < p <= 1.0:
+        raise ValueError("p debe estar en (0, 1].")
+    n = int(n)
+    if n < 2:
+        raise ValueError("n debe ser al menos 2 simulaciones.")
+
+    generador = np.random.default_rng(semilla)
+    muestra = generador.geometric(p, size=n)
+
+    alto = int(min(max(5, int(muestra.max())), 60))
+    x = np.arange(1, alto + 1)
+    fig = _grafico_sim(
+        muestra, f"Simulación Geométrica (p = {p:.2f})",
+        "Ensayos hasta el primer éxito",
+        teorica=(x, stats.geom.pmf(x, p)))
+
+    resumen = _resumen_sim(
+        "Geométrica", {"p": p}, muestra, 1.0 / p, (1.0 - p) / (p ** 2))
+    return {"fig": fig, "resumen": resumen}
+
+
+def simular_hipergeometrica(N: int = 200, K: int = 60, n: int = 10,
+                            n_sim: int = 1000, semilla=None):
+    """
+    Simula `n_sim` extracciones SIN reemplazo de `n` elementos tomados de una
+    población de tamaño `N` con `K` éxitos (distribución hipergeométrica).
+
+    Devuelve {"fig": Figure, "resumen": dict}. Media n·K/N y varianza
+    n·(K/N)·(1 − K/N)·(N − n)/(N − 1).
+    """
+    N, K, n, n_sim = int(N), int(K), int(n), int(n_sim)
+    if N < 2:
+        raise ValueError("N debe ser al menos 2.")
+    if not 0 <= K <= N:
+        raise ValueError("K debe cumplir 0 <= K <= N.")
+    if not 1 <= n <= N:
+        raise ValueError("n debe cumplir 1 <= n <= N.")
+    if n_sim < 2:
+        raise ValueError("n_sim debe ser al menos 2 simulaciones.")
+
+    generador = np.random.default_rng(semilla)
+    muestra = generador.hypergeometric(K, N - K, n, size=n_sim)
+
+    bajo = max(0, n - (N - K))
+    alto = min(n, K)
+    x = np.arange(bajo, alto + 1)
+    fig = _grafico_sim(
+        muestra, f"Simulación Hipergeométrica (N = {N}, K = {K}, n = {n})",
+        "Éxitos en la muestra",
+        teorica=(x, stats.hypergeom.pmf(x, N, K, n)))
+
+    proporcion = K / N
+    varianza = n * proporcion * (1 - proporcion)
+    if N > 1:
+        varianza *= (N - n) / (N - 1)
+    resumen = _resumen_sim(
+        "Hipergeométrica", {"N": N, "K": K, "n": n, "n_simulaciones": n_sim},
+        muestra, n * proporcion, varianza)
+    return {"fig": fig, "resumen": resumen}
+
+
+def simular_gamma(shape: float = 2.0, scale: float = 1.5, n: int = 1000,
+                  semilla=None):
+    """
+    Simula `n` valores X ~ Gamma(shape, scale).
+
+    Devuelve {"fig": Figure, "resumen": dict}. Media shape·scale y varianza
+    shape·scale². Con shape = 1 la Gamma se reduce a la Exponencial.
+    """
+    shape = float(shape)
+    scale = float(scale)
+    n = int(n)
+    if shape <= 0 or scale <= 0:
+        raise ValueError("shape y scale deben ser positivos.")
+    if n < 2:
+        raise ValueError("n debe ser al menos 2 simulaciones.")
+
+    generador = np.random.default_rng(semilla)
+    muestra = generador.gamma(shape, scale, size=n)
+
+    limite = float(stats.gamma.ppf(0.999, shape, scale=scale))
+    x = np.linspace(0.0, max(limite, 1e-6), 300)
+    fig = _grafico_sim(
+        muestra, f"Simulación Gamma (shape = {shape:g}, scale = {scale:g})",
+        "Valor", teorica=(x, stats.gamma.pdf(x, shape, scale=scale)),
+        discreta=False)
+
+    resumen = _resumen_sim(
+        "Gamma", {"shape": shape, "scale": scale}, muestra,
+        shape * scale, shape * scale ** 2)
+    return {"fig": fig, "resumen": resumen}
+
+
+# [FASE 2 - REPORTE] Agregado: simular_bernoulli, simular_binomial,
+# simular_geometrica, simular_hipergeometrica, simular_gamma

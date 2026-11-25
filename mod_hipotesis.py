@@ -4,6 +4,7 @@ Módulo 4: Pruebas de Hipótesis y Validación de Modelos (Unidad 3)
 - Pruebas no paramétricas: Mann-Whitney U
 - Validación de supuestos: Shapiro-Wilk (normalidad), Levene (homocedasticidad)
 - Modelo de clasificación: regresión logística + matriz de confusión + ROC
+- Comparación de más de dos grupos: ANOVA de un factor + chi-cuadrado
 """
 import numpy as np
 import pandas as pd
@@ -252,3 +253,184 @@ def entrenar_regresion_logistica(df: pd.DataFrame, target_col: str = "Es_Hora_Pi
         "y_pred": y_pred,
         "error": None,
     }
+
+
+# ============================================================
+# 3. ANOVA DE UN FACTOR Y CHI-CUADRADO (apoyo del reporte)
+# ============================================================
+def _interpretar_eta2(valor: float) -> str:
+    """Tamaño del efecto según los cortes de Cohen para eta² / V de Cramér."""
+    if valor is None or (isinstance(valor, float) and np.isnan(valor)):
+        return "N/A"
+    if valor < 0.01:
+        return "Muy pequeño"
+    if valor < 0.06:
+        return "Pequeño"
+    if valor < 0.14:
+        return "Mediano"
+    return "Grande"
+
+
+def _interpretar_v_cramer(valor: float, gl: int) -> str:
+    """Tamaño del efecto de V de Cramér ajustado por los grados de libertad."""
+    if valor is None or (isinstance(valor, float) and np.isnan(valor)) or gl <= 0:
+        return "N/A"
+    if gl == 1:
+        cortes = (0.10, 0.30, 0.50)
+    elif gl == 2:
+        cortes = (0.07, 0.21, 0.35)
+    else:
+        cortes = (0.06, 0.17, 0.29)
+    if valor < cortes[0]:
+        return "Muy pequeño"
+    if valor < cortes[1]:
+        return "Pequeño"
+    if valor < cortes[2]:
+        return "Mediano"
+    return "Grande"
+
+
+def anova(df: pd.DataFrame, valor_col: str, grupo_col: str) -> dict:
+    """
+    ANOVA de un factor: contrasta si la media de `valor_col` difiere entre los
+    niveles de `grupo_col`.
+
+    Acompaña el contraste con la prueba de Levene (homocedasticidad), el
+    tamaño del efecto eta² y la alternativa no paramétrica de Kruskal-Wallis.
+    Devuelve un dict de escalares (listo para tabla) o {"error": ...}.
+    """
+    if valor_col not in df.columns or grupo_col not in df.columns:
+        return {"error": f"Columnas {valor_col} o {grupo_col} no encontradas."}
+
+    datos = pd.DataFrame({
+        "valor": pd.to_numeric(df[valor_col], errors="coerce"),
+        "grupo": df[grupo_col].astype("string"),
+    }).dropna()
+    if datos.empty:
+        return {"error": f"No hay datos válidos de {valor_col} por {grupo_col}."}
+
+    series = [g["valor"].to_numpy()
+              for _, g in datos.groupby("grupo", observed=True)
+              if len(g) >= 2]
+    k = len(series)
+    n_total = int(sum(len(s) for s in series))
+    if k < 2 or n_total - k < 1:
+        return {"error": "Se necesitan al menos dos grupos con 2+ datos cada uno."}
+
+    f_stat, p_val = stats.f_oneway(*series)
+    _, lev_p = stats.levene(*series)
+
+    gran_media = float(datos["valor"].mean())
+    ss_entre = float(sum(len(s) * (s.mean() - gran_media) ** 2 for s in series))
+    ss_total = float(((datos["valor"] - gran_media) ** 2).sum())
+    eta2 = ss_entre / ss_total if ss_total > 0 else 0.0
+
+    if p_val < 0.05:
+        conclusion = (
+            f"Se rechaza H0 (F = {f_stat:.3f}, p = {p_val:.4f} < 0.05): al "
+            f"menos un grupo presenta una media distinta de {valor_col}."
+        )
+    else:
+        conclusion = (
+            f"No se rechaza H0 (F = {f_stat:.3f}, p = {p_val:.4f} >= 0.05): no "
+            f"hay evidencia de medias distintas de {valor_col} entre grupos."
+        )
+    if lev_p <= 0.05:
+        conclusion += (
+            " Levene indica varianzas desiguales; conviene revisar la versión "
+            "no paramétrica (Kruskal-Wallis)."
+        )
+
+    resultado = {
+        "prueba": "ANOVA de un factor (F de Fisher)",
+        "valor_col": valor_col,
+        "grupo_col": grupo_col,
+        "grupos": k,
+        "n_total": n_total,
+        "F": float(f_stat),
+        "p_value": float(p_val),
+        "gl_entre": k - 1,
+        "gl_dentro": n_total - k,
+        "eta_cuadrado": float(eta2),
+        "tamano_efecto": _interpretar_eta2(eta2),
+        "levene_p": float(lev_p),
+        "homocedasticidad": ("Sí (p > 0.05)" if lev_p > 0.05
+                             else "No (p <= 0.05)"),
+        "conclusion": conclusion,
+    }
+
+    try:
+        h_stat, h_p = stats.kruskal(*series)
+    except Exception:
+        h_stat, h_p = None, None
+    if h_p is not None and not np.isnan(h_p):
+        resultado["kruskal_h"] = float(h_stat)
+        resultado["kruskal_p"] = float(h_p)
+
+    return resultado
+
+
+def chi_cuadrado(df: pd.DataFrame, var1: str, var2: str) -> dict:
+    """
+    Prueba chi-cuadrado de independencia entre dos variables categóricas.
+
+    Reporta el estadístico, el p-valor, la V de Cramér como tamaño del efecto
+    y el porcentaje de celdas con frecuencia esperada menor que 5 (supuesto de
+    aproximación). Devuelve un dict de escalares o {"error": ...}.
+    """
+    if var1 not in df.columns or var2 not in df.columns:
+        return {"error": f"Columnas {var1} o {var2} no encontradas."}
+
+    tabla = pd.crosstab(
+        df[var1].fillna("(Nulo)").astype(str),
+        df[var2].fillna("(Nulo)").astype(str),
+    )
+    tabla = tabla.loc[tabla.sum(axis=1) > 0, tabla.sum(axis=0) > 0]
+    if tabla.shape[0] < 2 or tabla.shape[1] < 2:
+        return {"error": "Se requieren al menos 2 categorías en cada variable."}
+
+    chi2, p_val, gl, esperadas = stats.chi2_contingency(tabla)
+    n_total = int(tabla.to_numpy().sum())
+    min_dim = min(tabla.shape) - 1
+    v_cramer = (float(np.sqrt(chi2 / (n_total * min_dim)))
+                if n_total > 0 and min_dim > 0 else 0.0)
+    bajo5 = float((esperadas < 5).mean() * 100)
+
+    if p_val < 0.05:
+        conclusion = (
+            f"Se rechaza la independencia (chi² = {chi2:.3f}, "
+            f"p = {p_val:.4f} < 0.05): {var1} y {var2} están asociadas."
+        )
+    else:
+        conclusion = (
+            f"No se rechaza la independencia (chi² = {chi2:.3f}, "
+            f"p = {p_val:.4f} >= 0.05): no hay evidencia de asociación entre "
+            f"{var1} y {var2}."
+        )
+    if bajo5 > 20:
+        conclusion += (
+            " Más del 20 % de las celdas tiene frecuencia esperada menor que 5, "
+            "por lo que la aproximación chi² debe interpretarse con cautela."
+        )
+
+    return {
+        "prueba": "Chi-cuadrado de independencia",
+        "variable_1": var1,
+        "variable_2": var2,
+        "categorias_1": int(tabla.shape[0]),
+        "categorias_2": int(tabla.shape[1]),
+        "n_total": n_total,
+        "chi2": float(chi2),
+        "p_value": float(p_val),
+        "grados_libertad": int(gl),
+        "v_cramer": v_cramer,
+        "tamano_efecto": _interpretar_v_cramer(v_cramer, int(gl)),
+        "celdas_esperadas_bajo_5_pct": bajo5,
+        "supuesto_frecuencias": ("Cumplido" if bajo5 <= 20
+                                 else "Revisar (esperadas < 5)"),
+        "conclusion": conclusion,
+    }
+
+
+# [FASE 2 - REPORTE] Agregado: anova, chi_cuadrado (y auxiliares de tamaño
+# del efecto _interpretar_eta2, _interpretar_v_cramer)

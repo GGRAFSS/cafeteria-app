@@ -1,5 +1,20 @@
+# Entornos virtuales
 venv/
+.venv/
+env/
 __pycache__/
 *.pyc
+
+# Credenciales locales (NUNCA se suben al repositorio)
 .streamlit/secrets.toml
+
+# Datos crudos y PDFs generados localmente
 dataset_cafeteria_universitaria.csv
+reporte_*.pdf
+
+# Scripts de prueba/verificación y salidas temporales de desarrollo
+_smoke_*.py
+_verify_*.py
+_previz_*.py
+_prev_*.png
+_out_*.txt

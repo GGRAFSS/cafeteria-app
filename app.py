@@ -8,6 +8,9 @@ Pestañas:
   5) Hipótesis (Unidad 3) — próximamente
   6) Bayes (Unidad 4) — próximamente
 """
+import matplotlib
+
+matplotlib.use("Agg")  # sin GUI: Streamlit y el reporte PDF corren en servidor
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -17,6 +20,7 @@ import viz_utils as vu
 import mod_distribuciones as md
 import mod_hipotesis
 import mod_bayes
+from mod_reporte_est import generar_reporte_est_pdf
 # ============================================================
 # CONFIGURACIÓN DE PÁGINA
 # ============================================================
@@ -101,6 +105,34 @@ with st.sidebar:
 
     st.divider()
     st.caption("💾 Datos almacenados en Supabase (nube)")
+
+# ============================================================
+# REPORTE ESTADÍSTICO EN PDF (sidebar)
+# ============================================================
+with st.sidebar:
+    st.markdown("### 📄 Reporte estadístico")
+    st.caption(
+        "Documento completo: portada, índices, resumen ejecutivo y las cuatro "
+        "unidades del curso."
+    )
+    if st.button("📄 Generar Reporte PDF", use_container_width=True):
+        with st.spinner("Calculando métricas y maquetando el PDF…"):
+            pdf_bytes, error_reporte = generar_reporte_est_pdf(df)
+        if error_reporte:
+            st.session_state.pop("reporte_pdf", None)
+            st.error(f"No se pudo generar el reporte: {error_reporte}")
+        else:
+            st.session_state["reporte_pdf"] = pdf_bytes
+            st.success("Reporte generado. Descárgalo abajo.")
+
+    if st.session_state.get("reporte_pdf"):
+        st.download_button(
+            "⬇️ Descargar reporte PDF",
+            data=st.session_state["reporte_pdf"],
+            file_name="reporte_cafeteria.pdf",
+            mime="application/pdf",
+            use_container_width=True,
+        )
 
 # ============================================================
 # BANNER DE ERROR

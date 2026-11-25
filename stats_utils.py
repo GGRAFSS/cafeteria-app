@@ -1,4 +1,5 @@
-"""Estadísticas descriptivas, resumen ejecutivo y detección de outliers para variables numéricas y categóricas."""
+"""Estadísticas descriptivas, resumen ejecutivo, detección de outliers, media
+ponderada y matriz de correlación para variables numéricas y categóricas."""
 import pandas as pd
 
 NUMERIC_COLS = [
@@ -153,3 +154,63 @@ def detect_outliers_iqr(df: pd.DataFrame, cols: list[str] | None = None) -> tupl
         detail = pd.DataFrame()
 
     return summary, detail
+
+
+def media_ponderada(df: pd.DataFrame, value_col: str, weight_col: str) -> float:
+    """
+    Media ponderada de `value_col` tomando `weight_col` como ponderador.
+
+    Se descartan los pares incompletos y los pesos no positivos. Se usa, por
+    ejemplo, para promediar el consumo dando más peso a los clientes que
+    ocuparon más tiempo al barista.
+
+    Lanza ValueError si faltan columnas o no quedan pares válidos.
+    """
+    faltantes = [c for c in (value_col, weight_col) if c not in df.columns]
+    if faltantes:
+        raise ValueError(f"Columnas no encontradas: {', '.join(faltantes)}")
+
+    pares = pd.DataFrame({
+        "valor": pd.to_numeric(df[value_col], errors="coerce"),
+        "peso": pd.to_numeric(df[weight_col], errors="coerce"),
+    }).dropna()
+    pares = pares[pares["peso"] > 0]
+
+    total_peso = float(pares["peso"].sum()) if not pares.empty else 0.0
+    if total_peso <= 0:
+        raise ValueError("No hay pares valor-peso válidos para ponderar.")
+
+    return float((pares["valor"] * pares["peso"]).sum() / total_peso)
+
+
+def matriz_correlacion(df: pd.DataFrame,
+                       cols: list[str] | None = None) -> pd.DataFrame:
+    """
+    Matriz de correlación de Pearson entre las variables numéricas.
+
+    - `cols`: subconjunto de columnas a considerar (por omisión NUMERIC_COLS).
+    - Cada celda usa los pares completos (min_periods=3), por lo que los
+      nulos de una variable no eliminan las correlaciones de las demás.
+    - El índice se nombra "Variable" para que `reset_index()` produzca una
+      tabla legible en el reporte.
+
+    Lanza ValueError si quedan menos de dos variables utilizables.
+    """
+    candidatas = [c for c in (cols if cols is not None else NUMERIC_COLS)
+                  if c in df.columns]
+    numericas = df[candidatas].apply(pd.to_numeric, errors="coerce")
+    numericas = numericas.loc[:, numericas.notna().sum() >= 3]
+
+    if numericas.shape[1] < 2:
+        raise ValueError(
+            "Se necesitan al menos dos variables numéricas con datos "
+            "suficientes para la matriz de correlación."
+        )
+
+    corr = numericas.corr(method="pearson", min_periods=3)
+    corr.index.name = "Variable"
+    corr.columns.name = None
+    return corr
+
+
+# [FASE 2 - REPORTE] Agregado: media_ponderada, matriz_correlacion
