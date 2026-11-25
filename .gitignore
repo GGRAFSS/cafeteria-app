@@ -7,6 +7,9 @@ __pycache__/
 
 # Credenciales locales (NUNCA se suben al repositorio)
 .streamlit/secrets.toml
+.env
+.env.*
+!.env.example
 
 # Datos crudos y PDFs generados localmente
 dataset_cafeteria_universitaria.csv

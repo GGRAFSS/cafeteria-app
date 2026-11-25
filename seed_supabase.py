@@ -2,12 +2,22 @@
 Genera 200 registros simulados según el diccionario de datos de la cafetería universitaria
 y los inserta en la tabla cafeteria de Supabase.
 """
+import os
 import random
+
+from dotenv import load_dotenv
 from supabase import create_client
 
-# ---------- ⚠️ REEMPLAZA CON TUS CREDENCIALES ----------
-SUPABASE_URL = "https://htjrayalhorifgtbrguj.supabase.co/"
-SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh0anJheWFsaG9yaWZndGJyZ3VqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMwNTUyMjcsImV4cCI6MjEwODYzMTIyN30.kO2cmo29Ov0ZAzip7dczhFpDnNrwRwfeaVb1CMQIIPE"
+load_dotenv()
+
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+
+if not SUPABASE_URL or not SUPABASE_KEY:
+    raise ValueError(
+        "Faltan las variables de entorno SUPABASE_URL y SUPABASE_KEY. "
+        "Configúralas en un archivo .env"
+    )
 
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
