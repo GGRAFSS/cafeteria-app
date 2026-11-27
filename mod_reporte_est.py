@@ -557,30 +557,58 @@ class ReporteCafeteriaEst(FPDF):
         self.set_text_color(0, 0, 0)
 
     def _fila_indice(self, titulo: str, pagina, con_puntos: bool = True):
-        """Dibuja una entrada de índice con el número de página a la derecha."""
+        """Dibuja una entrada de índice con folio en columna fija y puntos guía.
+
+        El número de página se dibuja en una columna reservada junto al margen
+        derecho y el título se recorta al ancho restante. Así el folio queda
+        alineado en vertical y NUNCA se superpone ni se pega al texto.
+
+        Los puntos guía se dibujan SIEMPRE —índice de contenido, de figuras y
+        de tablas— siempre que quede espacio suficiente entre el título y la
+        columna del folio. El argumento ``con_puntos`` se conserva únicamente
+        por compatibilidad con las llamadas existentes (contenido usa True y
+        figuras/tablas False); ya no desactiva los puntos.
+        """
         if self.get_y() + 7 > self.h - self.b_margin - 8:
             self.add_page()
             self.cap_actual = ""
-        self.set_x(self.l_margin)
+
+        y = self.get_y()
+        x_izq = self.l_margin
+        x_der = self.w - self.r_margin
+        ancho_folio = 12        # columna reservada para el número de página
+        separacion = 4          # espacio mínimo entre el texto y el folio
+        ancho_disponible = max(x_der - x_izq - ancho_folio - separacion, 10)
+
         self.set_font(self.FONT, "", 10)
         self.set_text_color(0, 0, 0)
-        ancho_total = self.w - self.l_margin - self.r_margin
-        ancho_titulo = min(self.get_string_width(titulo) + 2, ancho_total - 20)
-        titulo_mostrado = titulo
-        if ancho_titulo >= ancho_total - 20:
-            titulo_mostrado = self._trunc(titulo, ancho_total - 22, 10)
-            ancho_titulo = self.get_string_width(titulo_mostrado) + 2
+
+        # Título recortado al espacio disponible (sin invadir la columna del folio)
+        titulo_mostrado = self._trunc(titulo, ancho_disponible, 10)
+        ancho_titulo = min(self.get_string_width(titulo_mostrado) + 2,
+                           ancho_disponible)
+
+        self.set_xy(x_izq, y)
         self.cell(ancho_titulo, 6, titulo_mostrado, 0, 0, "L")
-        if con_puntos:
-            ancho_puntos = max(ancho_total - ancho_titulo - 15, 2)
+
+        # Puntos guía: siempre (contenido, figuras y tablas) si hay espacio
+        x_puntos = self.get_x()
+        ancho_puntos = x_der - ancho_folio - separacion - x_puntos
+        if ancho_puntos > 2:
             ancho_punto = self.get_string_width(".") or 1
             n_puntos = max(int(ancho_puntos / ancho_punto) - 1, 0)
-            self.set_text_color(180, 180, 180)
-            self.cell(ancho_puntos, 6, "." * n_puntos, 0, 0, "L")
-        self.set_text_color(0, 0, 0)
+            if n_puntos:
+                self.set_text_color(180, 180, 180)
+                self.cell(ancho_puntos, 6, "." * n_puntos, 0, 0, "L")
+                self.set_text_color(0, 0, 0)
+
+        # Folio alineado al margen derecho (columna propia, sin solapes)
+        self.set_xy(x_der - ancho_folio, y)
         self.set_font(self.FONT, "B", 10)
-        self.cell(15, 6, str(pagina), 0, 1, "R")
+        self.cell(ancho_folio, 6, str(pagina), 0, 1, "R")
+
         self.set_font(self.FONT, "", 10)
+        self.set_x(x_izq)
 
     def indice_contenido(self):
         self._cabecera_indice("Índice de Contenido")

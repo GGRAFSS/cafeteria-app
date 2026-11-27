@@ -1,0 +1,20 @@
+# Configuración del servidor Streamlit — Cafetería Universitaria (Estadística)
+
+# ------------------------------------------------------------
+# TEMA INSTITUCIONAL (fuerza modo claro)
+# ------------------------------------------------------------
+[theme]
+base = "light"
+primaryColor = "#003366"
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F5F5F5"
+textColor = "#1A1A1A"
+
+# ------------------------------------------------------------
+# SERVIDOR
+# Habilita el endpoint /app/static/* para servir la carpeta ./static,
+# de donde el CSS del hero toma la imagen: url("/app/static/hero.jpeg").
+# ------------------------------------------------------------
+[server]
+enableStaticServing = true
+

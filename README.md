@@ -284,6 +284,7 @@ Si alguna de las dos variables falta, el script se detiene con un `ValueError` *
 | `SUPABASE_URL` | Conexión a la base de datos | Supabase → Project Settings → API |
 | `SUPABASE_KEY` | Conexión a la base de datos (anon key) | Supabase → Project Settings → API |
 | `GEMINI_API_KEY` | Analista IA (pestaña 6) y textos del reporte | [Google AI Studio](https://aistudio.google.com/apikey) |
+| `GEMINI_MODEL` *(opcional)* | Modelo de Gemini a usar (default: `gemini-3.5-flash`); acepta env var o secret | Nombre del modelo en Google AI Studio |
 
 Sin `GEMINI_API_KEY` la app **no se rompe**: el módulo IA se desactiva solo y el reporte usa sus textos de respaldo.
 
@@ -344,6 +345,7 @@ GEMINI_API_KEY = "<tu-api-key>"
 | `ModuleNotFoundError: No module named 'google'` | Falta `google-genai` | Ídem (la app funciona sin IA, pero se pierde el analista) |
 | `KeyError: 'SUPABASE_URL'` | Secrets vacíos o mal formados | Revisar TOML en Settings → Secrets (comillas dobles) |
 | `KeyError: 'GEMINI_API_KEY'` | Secret ausente | Agregarlo y reiniciar la app |
+| El reporte sale con textos genéricos (sin IA) | El modelo devuelve `404 NOT_FOUND` (Google retira modelos a cuentas nuevas) | Definir `GEMINI_MODEL` con un modelo vigente (p. ej. `gemini-3.5-flash`) y reiniciar |
 | `RuntimeError: Se requieren al menos 20 registros` | Tabla con menos de 20 filas | Cargar datos (pestaña Captura o `seed_supabase.py`) |
 | El PDF tarda y se corta | Límite de recursos del plan gratuito | **Reboot app** y reintentar sin otras pestañas abiertas |
 

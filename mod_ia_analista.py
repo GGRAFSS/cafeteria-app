@@ -3,6 +3,11 @@ Módulo Analista con IA (Gemini)
 Genera interpretaciones dinámicas de métricas, gráficas y conclusiones
 a partir de los valores actuales de la base de datos.
 
+v3.4:
+- Modelo configurable: `GEMINI_MODEL` (env var o secret, por defecto
+  "gemini-3.5-flash"). Google dejó de servir `gemini-2.5-flash` a cuentas
+  nuevas (404), por eso el nombre del modelo ya no va hardcodeado.
+
 v3.3:
 - Parámetro `tipo` para distinguir "analisis" (doble capa) vs "decisiones"
   (lista operativa corta).
@@ -23,6 +28,25 @@ try:
     HAS_GENAI = True
 except ImportError:
     HAS_GENAI = False
+
+
+# Modelo de Gemini en uso. Google retira modelos para cuentas nuevas
+# (p. ej. `gemini-2.5-flash` responde 404 NOT_FOUND), así que se puede
+# cambiar sin tocar el código con `GEMINI_MODEL` (env var o secret).
+MODELO_IA_DEFAULT = "gemini-3.5-flash"
+MODELO_IA = (os.getenv("GEMINI_MODEL", "").strip() or MODELO_IA_DEFAULT)
+
+
+def _get_modelo() -> str:
+    """Modelo a usar: `GEMINI_MODEL` en secrets, luego entorno, luego default."""
+    try:
+        if "GEMINI_MODEL" in st.secrets:
+            val = str(st.secrets["GEMINI_MODEL"]).strip()
+            if val:
+                return val
+    except Exception:
+        pass
+    return MODELO_IA
 
 
 # ============================================================
@@ -187,7 +211,7 @@ Instrucciones estrictas:
                 types.Part.from_bytes(data=imagen_png_bytes, mime_type="image/png")
             )
         response = client.models.generate_content(
-            model="gemini-2.5-flash",
+            model=_get_modelo(),
             contents=contents,
         )
         if response and response.text and response.text.strip():

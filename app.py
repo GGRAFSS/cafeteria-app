@@ -11,6 +11,8 @@ Pestañas:
 import matplotlib
 
 matplotlib.use("Agg")  # sin GUI: Streamlit y el reporte PDF corren en servidor
+import os
+
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -32,6 +34,198 @@ st.set_page_config(
 )
 
 # ============================================================
+# ESTILO INSTITUCIONAL (CSS v5.1)
+# ============================================================
+CSS = """
+:root{
+    --azul:#003366;
+    --azul-oscuro:#0b2545;
+    --dorado:#C9A961;
+    --gris:#F5F5F5;
+    --texto:#1A1A1A;
+}
+.stApp{
+    background:linear-gradient(180deg,#FFFFFF 0%,#FAFBFC 100%);
+    color:var(--texto);
+}
+h1, h2, h3{ color:var(--azul); }
+
+/* ---------- MODO CLARO FORZADO ---------- */
+/* El tema base es light (.streamlit/config.toml). Estas reglas impiden que el
+   contenido del área principal herede colores oscuros del tema del sistema. */
+[data-testid="stAppViewContainer"], [data-testid="stHeader"]{ color:var(--texto); }
+[data-testid="stHeader"]{ background:rgba(255,255,255,.88); }
+[data-testid="stMarkdownContainer"] p,
+[data-testid="stMarkdownContainer"] li,
+[data-testid="stMarkdownContainer"] td,
+[data-testid="stMarkdownContainer"] th,
+[data-testid="stMarkdownContainer"] h4,
+[data-testid="stMarkdownContainer"] h5,
+[data-testid="stWidgetLabel"] p,
+[data-testid="stCaptionContainer"] p{ color:var(--texto); }
+
+/* ---------- HERO ---------- */
+.hero{
+    position:relative; min-height:240px; margin:0 0 1rem 0; padding:2.3rem 2.6rem;
+    border-radius:16px; overflow:hidden;
+    display:flex; flex-direction:column; justify-content:center;
+    background-image:
+        linear-gradient(105deg, rgba(0,51,102,.94) 0%, rgba(0,51,102,.78) 48%, rgba(11,37,69,.42) 100%),
+        url("/app/static/hero.jpeg");
+    background-size:cover; background-position:center;
+    box-shadow:0 10px 26px rgba(0,51,102,.28);
+}
+.hero h1, .hero h3, .hero p{
+    position:relative; margin:0; color:#FFFFFF !important;
+    text-shadow:0 2px 8px rgba(0,0,0,.55);
+}
+.hero h1{ font-size:2.1rem; font-weight:800; letter-spacing:.3px; }
+.hero h3{ font-size:1.12rem; font-weight:600; color:var(--dorado) !important; margin:.4rem 0 .5rem 0; }
+.hero p{ font-size:.95rem; opacity:.95; }
+
+/* ---------- BOTONES ---------- */
+.stButton > button{ border-radius:9px; font-weight:600; }
+.stButton > button[kind="primary"], button[data-testid="stBaseButton-primary"]{
+    background:var(--azul) !important; color:#FFFFFF !important;
+    border:1px solid var(--azul) !important;
+    box-shadow:0 4px 14px rgba(0,51,102,.22);
+}
+.stButton > button[kind="primary"] p, button[data-testid="stBaseButton-primary"] p{ color:#FFFFFF !important; }
+.stButton > button[kind="primary"]:hover, button[data-testid="stBaseButton-primary"]:hover{
+    background:var(--dorado) !important; color:var(--azul-oscuro) !important;
+    border-color:#b3924f !important;
+}
+.stButton > button[kind="primary"]:hover p, button[data-testid="stBaseButton-primary"]:hover p{
+    color:var(--azul-oscuro) !important;
+}
+
+/* ---------- PESTAÑAS ---------- */
+.stTabs [data-baseweb="tab-list"]{
+    gap:6px; background:var(--gris); padding:6px;
+    border-radius:12px; border:1px solid #E3E6EB;
+}
+.stTabs [data-baseweb="tab"]{ border-radius:9px; padding:6px 14px; font-weight:600; color:#33475B; background:transparent; }
+.stTabs [aria-selected="true"]{ background:var(--azul) !important; }
+.stTabs [aria-selected="true"] p{ color:#FFFFFF !important; }
+.stTabs [data-baseweb="tab-highlight"], .stTabs [data-baseweb="tab-border"]{ display:none; }
+
+/* ---------- MÉTRICAS ---------- */
+[data-testid="stMetric"]{
+    background:var(--gris); border-left:4px solid var(--azul);
+    border-radius:10px; padding:.6rem .9rem;
+}
+[data-testid="stMetricLabel"] p{ color:#33475B !important; font-weight:600; }
+[data-testid="stMetricValue"]{ color:var(--azul); }
+
+/* ---------- SIDEBAR ---------- */
+[data-testid="stSidebar"]{ background:var(--azul-oscuro); }
+[data-testid="stSidebar"] h1, [data-testid="stSidebar"] h2, [data-testid="stSidebar"] h3{ color:#FFFFFF; }
+[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p,
+[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] li,
+[data-testid="stSidebar"] [data-testid="stWidgetLabel"] p{ color:#E8EEF7; }
+[data-testid="stSidebar"] [data-testid="stCaptionContainer"] p{ color:#BFD0E4; }
+[data-testid="stSidebar"] hr{ border-color:rgba(255,255,255,.18); }
+[data-testid="stSidebar"] .stButton > button,
+[data-testid="stSidebar"] .stDownloadButton > button{
+    background:var(--gris) !important; color:var(--azul) !important;
+    border:1px solid rgba(201,169,97,.55) !important;
+}
+[data-testid="stSidebar"] .stButton > button p,
+[data-testid="stSidebar"] .stDownloadButton > button p{ color:var(--azul) !important; }
+[data-testid="stSidebar"] .stButton > button:hover,
+[data-testid="stSidebar"] .stDownloadButton > button:hover{
+    background:var(--dorado) !important; color:var(--azul-oscuro) !important;
+    border-color:var(--dorado) !important;
+}
+[data-testid="stSidebar"] .stButton > button:hover p,
+[data-testid="stSidebar"] .stDownloadButton > button:hover p{ color:var(--azul-oscuro) !important; }
+/* Alertas dentro del sidebar: fondo claro para que se lean sobre el azul */
+[data-testid="stSidebar"] [data-testid="stAlert"],
+[data-testid="stSidebar"] [data-testid="stAlert"] > div,
+[data-testid="stSidebar"] [data-testid="stAlertContainer"]{
+    background:#FFFFFF !important;
+    border-radius:9px !important;
+}
+[data-testid="stSidebar"] [data-testid="stAlert"] p,
+[data-testid="stSidebar"] [data-testid="stAlert"] li,
+[data-testid="stSidebar"] [data-testid="stAlert"] a{
+    color:#1A1A1A !important;
+}
+[data-testid="stSidebar"] [data-testid="stAlert"] a{ text-decoration:underline; }
+
+/* Insignia de estado de conexión (siempre legible, sin depender del tema) */
+.conn-badge{
+    display:flex; align-items:center; gap:.45rem;
+    margin:.15rem 0 .4rem 0; padding:.55rem .75rem;
+    border-radius:9px; border-left:4px solid;
+    font-size:.88rem; font-weight:600; line-height:1.3;
+}
+.conn-badge.ok{ background:#E8F5E9; border-color:#2E7D32; color:#1B5E20 !important; }
+.conn-badge.fail{ background:#FDECEA; border-color:#C62828; color:#8E1B16 !important; }
+[data-testid="stSidebar"] [data-testid="stMetric"]{
+    background:rgba(255,255,255,.10); border-left:4px solid var(--dorado);
+}
+[data-testid="stSidebar"] [data-testid="stMetricLabel"] p{ color:#CFDCEC !important; }
+[data-testid="stSidebar"] [data-testid="stMetricValue"]{ color:#FFFFFF; }
+"""
+st.markdown(f"<style>{CSS}</style>", unsafe_allow_html=True)
+
+def _toast_diferido(mensaje: str, icono: str = "✅") -> None:
+    """Encola un toast para mostrarlo después del siguiente ``st.rerun()``."""
+    st.session_state["_toast_pendiente"] = (mensaje, icono)
+
+
+_pendiente = st.session_state.pop("_toast_pendiente", None)
+if _pendiente:
+    st.toast(_pendiente[0], icon=_pendiente[1])
+
+# ============================================================
+# POPUP DE BIENVENIDA (1 vez por sesión)
+# ============================================================
+@st.dialog("👋 Bienvenido al Laboratorio de Modelos Estadísticos", width="large")
+def _mostrar_bienvenida() -> None:
+    """Popup institucional de bienvenida (1 vez por sesión o desde el sidebar)."""
+    c_logo1, c_logo2 = st.columns(2)
+    if os.path.exists("assets/logo_tecnm_virtual.png"):
+        with c_logo1:
+            st.image("assets/logo_tecnm_virtual.png", width=110)
+    if os.path.exists("assets/logo_maestria_ia.png"):
+        with c_logo2:
+            st.image("assets/logo_maestria_ia.png", width=95)
+
+    st.markdown("### ☕ Cafetería Universitaria — Laboratorio de Modelos Estadísticos")
+    st.markdown(
+        """
+        **Materia:** Modelos Estadísticos · **Posgrado:** Maestría en Inteligencia Artificial  
+        **Institución:** TecNM — Instituto Tecnológico de Tijuana · **Periodo:** 2026
+
+        **Autores:** Rodríguez Avilez Selene · Raygoza Flores Gabriel  
+        **Docente:** Dr. Valdez Acosta Fevrier Adolfo
+        """
+    )
+    st.markdown(
+        """
+        **¿Qué puedes hacer en esta app?**
+        - 📝 **Capturar, cargar y normalizar** los registros de clientes (7:00–11:00 AM).
+        - 📊 **Unidades 1 y 2:** estadística descriptiva, visualizaciones, distribuciones
+          de probabilidad y pruebas de bondad de ajuste.
+        - 🧪 **Unidad 3:** pruebas de hipótesis, validación de supuestos y modelos
+          de clasificación (regresión logística).
+        - 🎲 **Unidad 4:** estadística bayesiana, Naive Bayes y comparación de modelos.
+        - 📄 **Generar y descargar el reporte PDF** con las cuatro unidades del curso.
+        """
+    )
+    if st.button("Comenzar 🚀", type="primary", use_container_width=True):
+        # Persistimos la decisión en la URL (?bienvenida=0) para que
+        # sobreviva a los reruns y a la recarga de la pestaña.
+        st.query_params["bienvenida"] = "0"
+        st.rerun()
+
+
+if st.query_params.get("bienvenida") != "0":
+    _mostrar_bienvenida()
+
+# ============================================================
 # CARGA DE DATOS CON MANEJO DE ERROR
 # ============================================================
 df, load_error = dm.load_data()
@@ -40,10 +234,10 @@ df, load_error = dm.load_data()
 # SIDEBAR
 # ============================================================
 with st.sidebar:
-    st.image(
-        "https://img.icons8.com/color/96/000000/coffee-to-go.png",
-        width=80,
-    )
+    if os.path.exists("assets/logo_tecnm_virtual.png"):
+        st.image("assets/logo_tecnm_virtual.png", width=90)
+    if os.path.exists("assets/logo_maestria_ia.png"):
+        st.image("assets/logo_maestria_ia.png", width=80)
     st.markdown("### 📋 Información del proyecto")
     st.markdown(
         """
@@ -75,9 +269,15 @@ with st.sidebar:
 
     st.markdown("### 🔌 Estado de la conexión")
     if load_error:
-        st.error("❌ Sin conexión a Supabase")
+        st.markdown(
+            '<div class="conn-badge fail">❌ Sin conexión a Supabase</div>',
+            unsafe_allow_html=True,
+        )
     else:
-        st.success(f"✅ Conectado ({len(df)} registros)")
+        st.markdown(
+            f'<div class="conn-badge ok">✅ Conectado ({len(df)} registros)</div>',
+            unsafe_allow_html=True,
+        )
 
     st.divider()
 
@@ -105,6 +305,11 @@ with st.sidebar:
 
     st.divider()
     st.caption("💾 Datos almacenados en Supabase (nube)")
+
+    if st.button("ℹ️ Acerca del proyecto", use_container_width=True):
+        # Limpiamos el query param para que el popup vuelva a aparecer.
+        st.query_params.clear()
+        st.rerun()
 
 # ============================================================
 # REPORTE ESTADÍSTICO EN PDF (sidebar)
@@ -152,9 +357,18 @@ if load_error:
     st.stop()
 
 # ============================================================
-# TÍTULO PRINCIPAL
+# HERO INSTITUCIONAL
 # ============================================================
-st.title("☕ Cafetería Universitaria — Captura y Análisis")
+st.markdown(
+    """
+    <div class="hero hero-container">
+        <h1>☕ Cafetería Universitaria</h1>
+        <h3>Laboratorio de Modelos Estadísticos</h3>
+        <p>Maestría en IA · TecNM · Instituto Tecnológico de Tijuana</p>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
 st.markdown(
     """
     **Análisis estadístico de clientes en horario matutino (7:00 AM – 11:00 AM).**
@@ -179,54 +393,230 @@ tabs = st.tabs([
 
 # ============ 1. CAPTURA ============
 with tabs[0]:
-    st.subheader("Nuevo registro")
-    with st.form("form_captura", clear_on_submit=True):
-        c1, c2, c3 = st.columns(3)
-        with c1:
-            hora = st.number_input("Hora de llegada (7.00–11.00)", 7.00, 11.00, 8.00, 0.25,
-                                   help="Formato decimal: 8.25 = 8:15 AM")
-            espera = st.number_input("Tiempo de espera (min)", 0.1, 60.0, 3.0, 0.5)
-            servicio = st.number_input("Tiempo de servicio (min)", 0.1, 30.0, 4.0, 0.5)
-        with c2:
-            tipo = st.selectbox("Tipo de cliente", ["Estudiante", "Profesor", "Administrativo"])
-            pago = st.selectbox("Método de pago", ["(Nulo)", "Efectivo", "Tarjeta", "App"])
-            consumo = st.number_input("Consumo total (MXN)", 0.0, 500.0, 45.0, 1.0)
-        with c3:
-            sat = st.selectbox("Satisfacción (1–5)", ["(Nulo)", 1, 2, 3, 4, 5])
-            pico = st.selectbox("¿Hora pico (8–9 AM)?", ["No", "Sí"])
+    st.subheader("Gestión de datos")
 
-        submitted = st.form_submit_button("💾 Guardar registro")
+    # Conteo en vivo de la base: solo informativo, la ingesta es libre.
+    n_actual = dm.count_records()
+    if n_actual < 0:
+        st.warning(
+            "No se pudo leer el conteo de registros en Supabase: la ingesta "
+            "sigue disponible, pero el conteo actual es desconocido."
+        )
+    else:
+        st.caption(f"📦 Base actual: **{n_actual}** registros")
 
-    if submitted:
-        if st.session_state.get("guardando", False):
-            st.warning("⏳ Ya hay un guardado en proceso, espera un momento.")
-        else:
-            st.session_state["guardando"] = True
-            record = {
-                "ID_Cliente": dm.next_id(df),
-                "Hora_Llegada": float(hora),
-                "Tiempo_Espera_Min": float(espera),
-                "Tiempo_Servicio_Min": float(servicio),
-                "Tipo_Cliente": tipo,
-                "Metodo_Pago": None if pago == "(Nulo)" else pago,
-                "Consumo_Total_MXN": float(consumo),
-                "Satisfaccion_1_al_5": None if sat == "(Nulo)" else int(sat),
-                "Es_Hora_Pico": pico,
-            }
-            errors = dm.validate_record(record)
-            if errors:
-                for e in errors:
-                    st.error(e)
-                st.session_state["guardando"] = False
+    tab_manual, tab_file, tab_sintetico, tab_norm = st.tabs(
+        [
+            "Formulario Manual",
+            "Subir CSV/Excel",
+            "Generador Sintético",
+            "⚖️ Normalizador de BD",
+        ]
+    )
+
+    # --- MANUAL ---
+    with tab_manual:
+        st.markdown("#### Nuevo registro")
+        with st.form("form_captura", clear_on_submit=True):
+            c1, c2, c3 = st.columns(3)
+            with c1:
+                hora = st.number_input("Hora de llegada (7.00–11.00)", 7.00, 11.00, 8.00, 0.25,
+                                       help="Formato decimal: 8.25 = 8:15 AM")
+                espera = st.number_input("Tiempo de espera (min)", 0.1, 60.0, 3.0, 0.5)
+                servicio = st.number_input("Tiempo de servicio (min)", 0.1, 30.0, 4.0, 0.5)
+            with c2:
+                tipo = st.selectbox("Tipo de cliente", ["Estudiante", "Profesor", "Administrativo"])
+                pago = st.selectbox("Método de pago", ["(Nulo)", "Efectivo", "Tarjeta", "App"])
+                consumo = st.number_input("Consumo total (MXN)", 0.0, 500.0, 45.0, 1.0)
+            with c3:
+                sat = st.selectbox("Satisfacción (1–5)", ["(Nulo)", 1, 2, 3, 4, 5])
+                pico = st.selectbox("¿Hora pico (8–9 AM)?", ["No", "Sí"])
+
+            submitted = st.form_submit_button("💾 Guardar registro")
+
+        if submitted:
+            if st.session_state.get("guardando", False):
+                st.warning("⏳ Ya hay un guardado en proceso, espera un momento.")
             else:
-                ok, save_error = dm.save_record(record)
-                if ok:
-                    st.success(f"✅ Registro ID {record['ID_Cliente']} guardado en Supabase.")
+                st.session_state["guardando"] = True
+                record = {
+                    "ID_Cliente": dm.next_id(df),
+                    "Hora_Llegada": float(hora),
+                    "Tiempo_Espera_Min": float(espera),
+                    "Tiempo_Servicio_Min": float(servicio),
+                    "Tipo_Cliente": tipo,
+                    "Metodo_Pago": None if pago == "(Nulo)" else pago,
+                    "Consumo_Total_MXN": float(consumo),
+                    "Satisfaccion_1_al_5": None if sat == "(Nulo)" else int(sat),
+                    "Es_Hora_Pico": pico,
+                }
+                errors = dm.validate_record(record)
+                if errors:
+                    for e in errors:
+                        st.error(e)
                     st.session_state["guardando"] = False
+                else:
+                    ok, save_error = dm.save_record(record)
+                    if ok:
+                        _toast_diferido(
+                            f"💾 Registro ID {record['ID_Cliente']} guardado en Supabase.",
+                            icono="✅",
+                        )
+                        st.session_state["guardando"] = False
+                        st.rerun()
+                    else:
+                        st.error(f"❌ Error al guardar en Supabase: {save_error}")
+                        st.session_state["guardando"] = False
+
+    # --- CSV / EXCEL ---
+    with tab_file:
+        st.markdown("Sube un archivo con las **mismas columnas** que el dataset original.")
+
+        st.markdown("#### 🧪 ¿No tienes un archivo? Genera uno de prueba")
+        _max_csv = 10000
+        c_gen1, c_gen2 = st.columns([1, 2])
+        with c_gen1:
+            n_csv = st.number_input(
+                "Cantidad de registros:", min_value=1, max_value=_max_csv,
+                value=min(50, _max_csv), step=1, key="gen_csv_n",
+            )
+        with c_gen2:
+            st.write("")
+            st.write("")
+            if st.button("📄 Generar CSV de Prueba", use_container_width=True):
+                df_prueba = dm.generar_datos_sinteticos(n_csv)
+                csv_prueba = df_prueba.to_csv(index=False).encode("utf-8")
+                st.session_state["csv_prueba"] = csv_prueba
+                st.success(f"✅ CSV con {n_csv} registros generado. Descárgalo abajo.")
+
+        if "csv_prueba" in st.session_state:
+            st.download_button(
+                label="⬇️ Descargar CSV generado",
+                data=st.session_state["csv_prueba"],
+                file_name="datos_prueba_cafeteria.csv",
+                mime="text/csv",
+                key="dl_csv_prueba",
+            )
+
+        st.divider()
+
+        uploaded_file = st.file_uploader(
+            "O sube un archivo CSV o Excel existente", type=["csv", "xlsx"]
+        )
+        if uploaded_file is not None:
+            try:
+                if uploaded_file.name.endswith(".csv"):
+                    file_df = pd.read_csv(uploaded_file)
+                else:
+                    file_df = pd.read_excel(uploaded_file)
+
+                st.write("Vista previa de los datos:")
+                st.dataframe(file_df.head(), use_container_width=True)
+                st.caption(f"Filas en el archivo: **{len(file_df)}**")
+
+                if st.button("🚀 Inyectar a Supabase"):
+                    missing_cols = [c for c in dm.COLUMNS if c not in file_df.columns]
+                    if missing_cols:
+                        st.error(f"Faltan columnas: {missing_cols}")
+                    else:
+                        with st.spinner("Insertando..."):
+                            ok, err, count = dm.bulk_insert(file_df)
+                        if ok:
+                            _toast_diferido(f"📥 {count} registros insertados.")
+                            st.rerun()
+                        else:
+                            st.error(f"Error: {err}")
+            except Exception as e:
+                st.error(f"Error al leer el archivo: {e}")
+
+    # --- SINTÉTICOS ---
+    with tab_sintetico:
+        st.markdown(
+            "Genera datos sintéticos con la misma distribución para probar los "
+            "análisis estadísticos y los modelos."
+        )
+        _max_sint = 5000
+        n_sint = st.slider(
+            "Cantidad de registros a generar:", 1, _max_sint, min(50, _max_sint)
+        )
+        if st.button(
+            "🧪 Generar e Insertar Sintéticos",
+            type="primary",
+            use_container_width=True,
+        ):
+            with st.spinner(f"Generando {n_sint} registros..."):
+                df_sint = dm.generar_datos_sinteticos(n_sint)
+                ok, err, count = dm.bulk_insert(df_sint)
+            if ok:
+                _toast_diferido(f"🧪 {count} registros sintéticos insertados.")
+                st.rerun()
+            else:
+                st.error(f"Error: {err}")
+
+    # --- NORMALIZADOR DE BD ---
+    with tab_norm:
+        st.markdown(
+            "Deja la base en **exactamente N registros** (1–200). Si hay más, se "
+            "eliminan los **más recientes** (ID alto) y se conservan los más "
+            "antiguos; si hay menos, se completan con datos sintéticos (seed 42)."
+        )
+        if n_actual < 0:
+            st.error(
+                "No se pudo leer el conteo actual de la base: el normalizador no "
+                "está disponible en este momento."
+            )
+        else:
+            _msg_norm = st.session_state.pop("norm_ok", None)
+            if _msg_norm:
+                st.toast(_msg_norm.removeprefix("✅ ").strip(), icon="⚖️")
+            st.caption(
+                f"📦 Base actual: **{n_actual} / {dm.MAX_REGISTROS}** registros"
+            )
+            n_objetivo = st.slider(
+                "Registros objetivo:",
+                min_value=dm.NORMALIZAR_MIN,
+                max_value=dm.NORMALIZAR_MAX,
+                value=min(max(n_actual, dm.NORMALIZAR_MIN), dm.NORMALIZAR_MAX),
+                step=1,
+                key="norm_objetivo",
+            )
+            delta = n_objetivo - n_actual
+            if delta == 0:
+                st.info("La base ya está en ese tamaño: no se hará ningún cambio.")
+            elif delta < 0:
+                st.warning(
+                    f"Se eliminarán **{abs(delta)}** registros (los más recientes, "
+                    "ID más alto)."
+                )
+            else:
+                st.warning(
+                    f"Se agregarán **{delta}** registros sintéticos para llegar "
+                    "al objetivo."
+                )
+            confirmar = st.checkbox(
+                "Confirmo que quiero ajustar la base a "
+                f"**{n_objetivo}** registros (esta acción modifica datos).",
+                key="norm_confirm",
+            )
+            if st.button(
+                "⚖️ Normalizar base de datos",
+                type="primary",
+                key="btn_normalizar",
+                disabled=not confirmar,
+            ):
+                with st.spinner(f"Ajustando la base a {n_objetivo} registros..."):
+                    ok, err, antes, despues, borrados, agregados = dm.normalizar_a(
+                        n_objetivo
+                    )
+                if ok:
+                    st.session_state["norm_ok"] = (
+                        f"✅ Base normalizada: {antes} → {despues} registros "
+                        f"({borrados} eliminados, {agregados} agregados)."
+                    )
+                    st.cache_data.clear()
                     st.rerun()
                 else:
-                    st.error(f"❌ Error al guardar en Supabase: {save_error}")
-                    st.session_state["guardando"] = False
+                    st.error(f"No se pudo normalizar: {err}")
 
 # ============ 2. REGISTROS ============
 with tabs[1]:
