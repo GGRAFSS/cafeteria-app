@@ -31,6 +31,7 @@ El proyecto forma parte de la asignatura **Modelos Estadísticos para el Aprendi
 | 🧪 | **Hipótesis y modelos (U3)** | **t de Student**, **Mann-Whitney U**, **ANOVA** de un factor, **chi-cuadrado** (η² y V de Cramér), supuestos (Shapiro-Wilk, Levene), regresión logística, matriz de confusión y curva **ROC**. |
 | 🎲 | **Bayes (U4)** | Calculadora de Bayes con **árbol de probabilidad**, Naive Bayes, Log-loss, Brier Score y prueba de **Friedman**. |
 | 📄 | **Reporte PDF profesional** | Portada con logos, índice general, índice de figuras y de tablas, 10 capítulos, ~1 MB, descargable desde la barra lateral. |
+| 🎓 | **Reporte didáctico** | Diez fichas **D1–D10** (una por figura/tabla clave) con **7 bloques**: qué se ve, interpretación técnica, palabras simples, temario, pedagogía, errores comunes y técnicas que **NO** aplican. |
 | 🤖 | **Analista con IA** | Interpretaciones en lenguaje natural con **Gemini**; si falta la clave, la app usa textos de respaldo. |
 | ☁️ | **100 % en la nube** | Sin instalación para el usuario final; cada `git push` a `main` redespliega la app. |
 
@@ -70,6 +71,7 @@ La app se organiza en **6 pestañas** y **4 módulos estadísticos**, uno por un
 |---|---|---|
 | **Capa de datos** | `data_manager.py` | Cliente oficial `supabase-py` cacheado con `st.cache_resource`, validaciones y limpieza. |
 | **Reporte PDF** | `mod_reporte_est.py` | Documento de 10 capítulos (~30 páginas, 22 figuras, 30 tablas) con portada, índices y paginación en 3 pasadas. |
+| **Reporte didáctico** | `mod_reporte_didactico_est.py` | Diez fichas pedagógicas (D1–D10) con siete bloques cada una; reutiliza el contexto y la clase PDF del reporte (`ReporteDidacticoEst` la especializa, el reporte original no se modifica). |
 | **Analista IA** | `mod_ia_analista.py` | Interpretaciones con **Gemini** (`google-genai`) y caché en memoria con TTL de 1 hora. |
 | **Carga inicial** | `seed_supabase.py` | Genera e inserta los **200 registros** simulados del dataset. |
 
@@ -77,7 +79,24 @@ La app se organiza en **6 pestañas** y **4 módulos estadísticos**, uno por un
 
 `📝 Captura` · `📋 Registros` · `📊 Estadísticas (U1)` · `📈 Distribuciones (U2)` · `🧪 Hipótesis (U3)` · `🎲 Bayes (U4)`
 
-> Además, la **barra lateral** concentra el estado de la conexión, el diccionario de variables y el botón **📄 Generar Reporte PDF**.
+> Además, la **barra lateral** concentra el estado de la conexión, el diccionario de variables y los botones **📄 Generar Reporte PDF** y **🎓 Reporte Didáctico**.
+
+### 🎓 Reporte didáctico: las diez fichas
+
+| Ficha | Objeto explicado | Unidad |
+|---|---|---|
+| D1 | Histograma del tiempo de espera | U1 |
+| D2 | Histograma del consumo total | U1 |
+| D3 | Boxplot del tiempo de servicio | U1 |
+| D4 | Boxplot del consumo por tipo de cliente | U1 |
+| D5 | Matriz de correlación | U1 |
+| D6 | Ajuste exponencial (tiempo de espera) | U2 |
+| D7 | Ajuste normal (tiempo de servicio) | U2 |
+| D8 | Simulación Poisson de llegadas por minuto | U2 |
+| D9 | Prueba t de Student del consumo por tipo de cliente | U3 |
+| D10 | Calculadora de Bayes (prior vs posterior) | U4 |
+
+Cada ficha se redacta con `analizar_seccion_ia(tipo="didactico")` en paralelo (4 hilos) usando las métricas reales y el PNG de la figura. Si Gemini no está disponible, la ficha se dibuja con un **respaldo curado** redactado con esas mismas cifras, así que el PDF nunca queda en blanco.
 
 ---
 
@@ -152,6 +171,7 @@ cafeteria_app/
 ├── mod_hipotesis.py          ← Unidad 3: t, Mann-Whitney, ANOVA, chi-cuadrado, logística, ROC
 ├── mod_bayes.py              ← Unidad 4: Bayes, Naive Bayes, Friedman
 ├── mod_reporte_est.py        ← reporte PDF estadístico (portada, índices, 10 capítulos)
+├── mod_reporte_didactico_est.py ← reporte didáctico: 10 fichas de 7 bloques (FASE D)
 ├── mod_ia_analista.py        ← analista con IA (Gemini) para interpretaciones
 ├── seed_supabase.py          ← script de carga inicial (200 registros)
 ├── .env.example              ← plantilla de variables para seed_supabase.py
@@ -331,6 +351,7 @@ GEMINI_API_KEY = "<tu-api-key>"
 - [ ] La app carga el dataset desde Supabase (sin `KeyError` ni `APIError`).
 - [ ] El botón **📄 Generar Reporte PDF** termina sin error en un tiempo razonable (~10–30 s).
 - [ ] Se descarga `reporte_cafeteria.pdf` (~1 MB) y abre correctamente en el visor.
+- [ ] El botón **🎓 Reporte Didáctico** genera y descarga `reporte_didactico_cafeteria.pdf` (~0.5 MB, ~14 páginas) con las fichas D1–D10.
 - [ ] El PDF trae portada con logos, índice general, índice de figuras y de tablas, y los 10 capítulos.
 - [ ] La numeración de figuras y tablas es correlativa (sin huecos ni repetidos).
 - [ ] **No** aparece ninguna nota `[Pendiente Fase 2]`.
@@ -346,6 +367,7 @@ GEMINI_API_KEY = "<tu-api-key>"
 | `KeyError: 'SUPABASE_URL'` | Secrets vacíos o mal formados | Revisar TOML en Settings → Secrets (comillas dobles) |
 | `KeyError: 'GEMINI_API_KEY'` | Secret ausente | Agregarlo y reiniciar la app |
 | El reporte sale con textos genéricos (sin IA) | El modelo devuelve `404 NOT_FOUND` (Google retira modelos a cuentas nuevas) | Definir `GEMINI_MODEL` con un modelo vigente (p. ej. `gemini-3.5-flash`) y reiniciar |
+| El reporte didáctico trae fichas con "Respaldo redactado" | Gemini responde `429 RESOURCE_EXHAUSTED` (cuota del plan gratuito) | Esperar a que se reponga la cuota, usar `GEMINI_MODEL="gemini-3.5-flash-lite"` o subir el plan; el PDF se genera igual con el respaldo |
 | `RuntimeError: Se requieren al menos 20 registros` | Tabla con menos de 20 filas | Cargar datos (pestaña Captura o `seed_supabase.py`) |
 | El PDF tarda y se corta | Límite de recursos del plan gratuito | **Reboot app** y reintentar sin otras pestañas abiertas |
 

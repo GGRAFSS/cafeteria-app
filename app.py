@@ -340,6 +340,39 @@ with st.sidebar:
         )
 
 # ============================================================
+# REPORTE DIDÁCTICO EN PDF (sidebar, FASE D)
+# ============================================================
+with st.sidebar:
+    st.markdown("### 🎓 Reporte didáctico")
+    st.caption(
+        "Diez fichas (D1-D10) con siete bloques cada una: qué se ve, lectura "
+        "técnica, palabras simples, temario, pedagogía, errores comunes y "
+        "técnicas que NO aplican. Redactadas con IA a partir de las métricas "
+        "reales."
+    )
+    if st.button("🎓 Reporte Didáctico", use_container_width=True):
+        with st.spinner("Generando reporte didáctico..."):
+            from mod_reporte_didactico_est import (
+                generar_reporte_didactico_est_pdf,
+            )
+            pdf_bytes, err = generar_reporte_didactico_est_pdf(df)
+        if err:
+            st.session_state.pop("pdf_didactico", None)
+            st.error(f"Error: {err}")
+        else:
+            st.session_state["pdf_didactico"] = pdf_bytes
+            st.success("✅ Reporte didáctico generado.")
+
+    if st.session_state.get("pdf_didactico"):
+        st.download_button(
+            "⬇️ Descargar reporte didáctico",
+            data=st.session_state["pdf_didactico"],
+            file_name="reporte_didactico_cafeteria.pdf",
+            mime="application/pdf",
+            use_container_width=True,
+        )
+
+# ============================================================
 # BANNER DE ERROR
 # ============================================================
 if load_error:
